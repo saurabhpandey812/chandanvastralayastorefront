@@ -79,7 +79,7 @@ function SignupForm() {
 
   return (
     <AuthShell
-      kicker="Join Aaraish"
+      kicker="Join Chandan Vastralaya"
       title="Create your fashion account."
       subtitle="One account for wishlist, bag, saved addresses and order tracking."
     >
@@ -201,7 +201,7 @@ function SignupForm() {
               className="mt-0.5 accent-myntra"
             />
             <span>
-              I agree to the Aaraish Terms of Use and Privacy Policy, and I want order updates on email
+              I agree to the Chandan Vastralaya Terms of Use and Privacy Policy, and I want order updates on email
               &amp; WhatsApp.
             </span>
           </label>

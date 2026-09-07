@@ -10,9 +10,9 @@ const assistant = Assistant({
 });
 
 export const metadata: Metadata = {
-  title: 'Aaraish — Online Fashion Store',
+  title: 'Chandan Vastralaya — Online Fashion Store',
   description:
-    'Shop clothing for men, women and kids. Wishlist, bag, checkout and orders — a Myntra-style fashion store.',
+    'Shop clothing for men, women and kids at Chandan Vastralaya. Wishlist, bag, checkout and orders.',
 };
 
 export default function RootLayout({

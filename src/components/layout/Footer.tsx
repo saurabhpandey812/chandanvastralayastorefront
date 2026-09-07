@@ -26,7 +26,7 @@ const columns = [
     ],
   },
   {
-    title: 'Experience Aaraish App',
+    title: 'Experience Chandan Vastralaya App',
     links: [
       ['Android App', '/'],
       ['iOS App', '/'],
@@ -69,8 +69,8 @@ export default function Footer() {
       </div>
       <div className="border-t border-line">
         <div className="max-w-store mx-auto px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[12px] text-ink-soft">
-          <p>© {new Date().getFullYear()} www.aaraish.com. All rights reserved.</p>
-          <p>A clothing store inspired by India&apos;s favourite fashion app.</p>
+          <p>© {new Date().getFullYear()} Chandan Vastralaya. All rights reserved.</p>
+          <p>Ethnic and everyday fashion from Chandan Vastralaya.</p>
         </div>
       </div>
     </footer>

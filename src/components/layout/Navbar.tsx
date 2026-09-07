@@ -16,6 +16,7 @@ import { useWishlistStore } from '@/store/wishlistStore';
 import { useAuthStore } from '@/store/authStore';
 import { useHydrated } from '@/store/hydrate';
 import ProfileMenu from './ProfileMenu';
+import BrandLogo from '@/components/brand/BrandLogo';
 import { sanitizeSearch, searchQueryError } from '@/lib/validation';
 
 type MenuGroup = { title: string; links: [string, string][] };
@@ -498,14 +499,7 @@ export default function Navbar() {
             {mobileOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
 
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <span className="relative flex h-9 w-9 items-center justify-center rounded-md bg-myntra text-white font-black text-xl italic">
-              A
-            </span>
-            <span className="hidden sm:block font-extrabold text-[22px] tracking-tight text-ink">
-              Aaraish
-            </span>
-          </Link>
+          <BrandLogo href="/" hideNameOnMobile />
 
           <nav className="hidden lg:flex items-stretch h-full ml-6">
             {navItems.map((item) => (

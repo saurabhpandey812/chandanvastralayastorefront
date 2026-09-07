@@ -65,7 +65,7 @@ function LoginForm() {
     >
       <div className="bg-white border border-line shadow-card rounded-xl p-6 sm:p-8">
         <p className="text-[11px] font-bold tracking-[3px] uppercase text-myntra">Welcome back</p>
-        <h2 className="mt-2 text-2xl font-black text-ink">Login to Aaraish</h2>
+        <h2 className="mt-2 text-2xl font-black text-ink">Login to Chandan Vastralaya</h2>
         <p className="mt-1 text-sm text-muted">
           {next === '/checkout' || next === '/payment'
             ? 'Sign in to continue to checkout.'
@@ -141,13 +141,13 @@ function LoginForm() {
         </div>
 
         <p className="mt-5 text-sm text-center text-ink-soft">
-          New to Aaraish?{' '}
+          New to Chandan Vastralaya?{' '}
           <Link href={`/signup?next=${encodeURIComponent(next)}`} className="font-bold text-myntra">
             Create an account
           </Link>
         </p>
         <p className="mt-4 text-[11px] text-muted text-center flex items-center justify-center gap-1">
-          <ShieldCheck size={12} /> By continuing, you agree to Aaraish Terms &amp; Privacy Policy.
+          <ShieldCheck size={12} /> By continuing, you agree to Chandan Vastralaya Terms &amp; Privacy Policy.
         </p>
       </div>
     </AuthShell>

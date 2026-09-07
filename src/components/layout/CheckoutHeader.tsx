@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ShieldCheck } from 'lucide-react';
 import clsx from 'clsx';
+import BrandLogo from '@/components/brand/BrandLogo';
 
 const steps = [
   { id: 'bag', label: 'Bag', href: '/cart' },
@@ -26,14 +27,7 @@ export default function CheckoutHeader() {
   return (
     <header className="bg-white border-b border-line">
       <div className="max-w-store mx-auto px-6 h-[80px] flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-myntra text-white font-black text-xl italic">
-            A
-          </span>
-          <span className="font-extrabold text-[22px] tracking-tight text-ink">
-            Aaraish
-          </span>
-        </Link>
+        <BrandLogo href="/" />
 
         <nav className="hidden sm:flex items-center gap-3 text-[13px] font-bold uppercase tracking-[3px]">
           {steps.map((step, i) => (
