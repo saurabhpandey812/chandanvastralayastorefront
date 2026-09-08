@@ -12,21 +12,24 @@ function same(a: string, b: string) {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
+async function getDemoUser(): Promise<StoredUser> {
+  return {
+    id: 'u-demo',
+    name: 'Saurabh Pandey',
+    email: 'saurabh@chandanvastralaya.com',
+    mobile: '9876543210',
+    createdAt: '2026-08-01T10:00:00.000Z',
+    passwordHash: await hashSecret('Chandan@123'),
+  };
+}
+
 export function toPublic(user: StoredUser): PublicUser {
   const { passwordHash: _hash, ...profile } = user;
   return profile;
 }
 
 export async function ensureDemoUser() {
-  const passwordHash = await hashSecret('Chandan@123');
-  const demo: StoredUser = {
-    id: 'u-demo',
-    name: 'Saurabh Pandey',
-    email: 'saurabh@chandanvastralaya.com',
-    mobile: '9876543210',
-    createdAt: '2026-08-01T10:00:00.000Z',
-    passwordHash,
-  };
+  const demo = await getDemoUser();
 
   await store.update((users) => {
     const byId = users.findIndex((u) => u.id === demo.id);
@@ -39,7 +42,7 @@ export async function ensureDemoUser() {
       current.id === demo.id &&
       current.email === demo.email &&
       current.mobile === demo.mobile &&
-      current.passwordHash === passwordHash
+      current.passwordHash === demo.passwordHash
     ) {
       return users;
     }
@@ -50,30 +53,33 @@ export async function ensureDemoUser() {
   });
 }
 
+async function loadUsers() {
+  try {
+    await ensureDemoUser();
+    return await store.read();
+  } catch {
+    return [await getDemoUser()];
+  }
+}
+
 export async function findByEmail(email: string) {
-  await ensureDemoUser();
-  const users = await store.read();
+  const users = await loadUsers();
   return users.find((u) => same(u.email, email)) ?? null;
 }
 
 export async function findByLogin(id: string) {
-  await ensureDemoUser();
   const key = id.trim().toLowerCase();
-  const users = await store.read();
-  return (
-    users.find((u) => same(u.email, key) || u.mobile === id.trim()) ?? null
-  );
+  const users = await loadUsers();
+  return users.find((u) => same(u.email, key) || u.mobile === id.trim()) ?? null;
 }
 
 export async function findById(id: string) {
-  await ensureDemoUser();
-  const users = await store.read();
+  const users = await loadUsers();
   return users.find((u) => u.id === id) ?? null;
 }
 
 export async function findByIdOrEmail(id?: string | null, email?: string | null) {
-  await ensureDemoUser();
-  const users = await store.read();
+  const users = await loadUsers();
   if (id) {
     const byId = users.find((u) => u.id === id);
     if (byId) return byId;
