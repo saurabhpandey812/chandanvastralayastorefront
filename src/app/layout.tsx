@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: 'Chandan Vastralaya — Online Fashion Store',
   description:
     'Shop clothing for men, women and kids at Chandan Vastralaya. Wishlist, bag, checkout and orders.',
+  icons: { icon: '/logo.png' },
 };
 
 export default function RootLayout({

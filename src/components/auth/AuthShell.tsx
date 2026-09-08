@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react';
 import { ShieldCheck } from 'lucide-react';
-import BrandLogo from '@/components/brand/BrandLogo';
+import StoreMark from '@/components/brand/StoreMark';
 
 export default function AuthShell({
   children,
@@ -27,7 +27,7 @@ export default function AuthShell({
         />
         <div className="absolute inset-0 bg-gradient-to-br from-[#2b0a16]/85 via-[#ff3f6c]/55 to-[#2b0a16]/70" />
         <div className="relative z-10 h-full flex flex-col justify-between p-12 text-white">
-          <BrandLogo href="/" variant="light" size="lg" />
+          <StoreMark size="lg" tone="light" />
           <div>
             <p className="text-[12px] font-bold tracking-[4px] uppercase text-gold">{kicker}</p>
             <h1 className="mt-3 text-4xl xl:text-5xl font-black leading-tight">{title}</h1>
@@ -46,7 +46,7 @@ export default function AuthShell({
 
       <div className="flex flex-col min-h-screen">
         <header className="lg:hidden h-16 px-5 flex items-center border-b border-line bg-white">
-          <BrandLogo href="/" size="sm" />
+          <StoreMark size="sm" />
         </header>
         <div className="flex-1 flex items-center justify-center px-5 py-10">
           <div className="w-full max-w-[420px]">{children}</div>

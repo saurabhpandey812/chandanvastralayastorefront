@@ -16,6 +16,7 @@ import {
   onlyNameChars,
   passwordError,
   personNameError,
+  sanitizeEmail,
 } from '@/lib/validation';
 
 const genders: NonNullable<AuthUser['gender']>[] = ['Male', 'Female', 'Other'];
@@ -62,7 +63,7 @@ export default function EditProfilePage() {
 
   if (!user) return <ProfileGuest next="/profile/edit" />;
 
-  function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
     const nextErrors: Record<string, string> = {};
@@ -83,7 +84,7 @@ export default function EditProfilePage() {
     if (Object.keys(nextErrors).length) return;
 
     setBusy(true);
-    const result = updateProfile({
+    const result = await updateProfile({
       name,
       email,
       mobile,
@@ -97,6 +98,7 @@ export default function EditProfilePage() {
       return;
     }
     router.push('/profile');
+    router.refresh();
   }
 
   return (
@@ -161,7 +163,7 @@ export default function EditProfilePage() {
               <input
                 value={email}
                 onChange={(e) => {
-                  setEmail(e.target.value.slice(0, 80));
+                  setEmail(sanitizeEmail(e.target.value));
                   setErrors((prev) => ({ ...prev, email: '' }));
                 }}
                 maxLength={80}

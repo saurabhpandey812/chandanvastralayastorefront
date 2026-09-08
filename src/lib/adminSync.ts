@@ -1,5 +1,5 @@
 const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3001';
-const STORE_KEY = 'aaraish-store-demo';
+const STORE_KEY = process.env.STORE_API_KEY || 'chandan-vastralaya-store-demo';
 
 async function post(path: string, body: unknown) {
   try {

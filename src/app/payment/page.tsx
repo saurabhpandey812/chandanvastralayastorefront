@@ -12,11 +12,11 @@ import {
 import PriceDetails from '@/components/checkout/PriceDetails';
 import RequireAuth from '@/components/auth/RequireAuth';
 import { useCartStore } from '@/store/cartStore';
-import { useOrderStore } from '@/store/orderStore';
+import { useOrderStore, buildLocalOrder } from '@/store/orderStore';
 import { useHydrated } from '@/store/hydrate';
-import { useAuthStore } from '@/store/authStore';
 import { formatInr } from '@/lib/format';
-import { syncCustomerOrder } from '@/lib/adminSync';
+import { api } from '@/lib/api';
+import { Order } from '@/types/product';
 import {
   cardExpiryError,
   cardNameError,
@@ -26,6 +26,7 @@ import {
   formatExpiry,
   onlyDigits,
   onlyNameChars,
+  sanitizeUpi,
   upiError,
 } from '@/lib/validation';
 
@@ -54,14 +55,14 @@ function PaymentContent() {
   const coupon = useCartStore((s) => s.coupon);
   const clearCart = useCartStore((s) => s.clearCart);
   const address = useOrderStore((s) => s.address);
-  const placeOrder = useOrderStore((s) => s.placeOrder);
-  const user = useAuthStore((s) => s.user);
+  const recordOrder = useOrderStore((s) => s.recordOrder);
   const hydrated = useHydrated((s) => s.hydrated);
   const [method, setMethod] = useState('cod');
   const [card, setCard] = useState({ number: '', name: '', expiry: '', cvv: '' });
   const [upi, setUpi] = useState('');
   const [bank, setBank] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -86,67 +87,86 @@ function PaymentContent() {
 
   const total = price - couponOff;
 
-  function pay() {
+  async function pay() {
+    const next: Record<string, string> = {};
     if (method === 'upi') {
       const err = upiError(upi);
-      if (err) {
-        setError(err);
-        return;
-      }
+      if (err) next.upi = err;
     }
     if (method === 'card') {
-      const errs = [
-        cardNumberError(card.number),
-        cardNameError(card.name),
-        cardExpiryError(card.expiry),
-        cvvError(card.cvv),
-      ].filter(Boolean);
-      if (errs.length) {
-        setError(errs[0] as string);
-        return;
-      }
+      const numberErr = cardNumberError(card.number);
+      const nameErr = cardNameError(card.name);
+      const expiryErr = cardExpiryError(card.expiry);
+      const cvvErr = cvvError(card.cvv);
+      if (numberErr) next.number = numberErr;
+      if (nameErr) next.name = nameErr;
+      if (expiryErr) next.expiry = expiryErr;
+      if (cvvErr) next.cvv = cvvErr;
     }
     if (method === 'netbanking' && !bank) {
+      setFieldErrors({});
       setError('Select a bank to continue');
+      return;
+    }
+    setFieldErrors(next);
+    if (Object.keys(next).length) {
+      setError('');
       return;
     }
     setError('');
     setBusy(true);
     const labels: Record<string, string> = {
       cod: 'Cash on Delivery',
-      upi: `UPI (${upi})`,
+      upi: `UPI (${sanitizeUpi(upi)})`,
       card: `Card ending ${card.number.slice(-4) || '0000'}`,
       netbanking: bank ? `Net Banking (${bank})` : 'Net Banking',
       wallet: 'Wallet',
     };
-    const order = placeOrder({
-      items,
-      paymentMethod: labels[method],
-      couponCode: coupon ?? undefined,
-      discount: couponOff,
-      subtotal: price,
-      total,
+    const paymentMethod = labels[method];
+    const res = await api<{ order?: Order }>('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        address,
+        paymentMethod,
+        couponCode: coupon ?? undefined,
+        discount: couponOff,
+        subtotal: price,
+        total,
+        items: items.map((item) => ({
+          productId: item.product.id,
+          slug: item.product.slug,
+          size: item.size,
+          color: item.product.colors?.[0],
+          quantity: item.quantity,
+        })),
+      }),
     });
-    if (!order) {
+    if (!res.ok || !res.data.order) {
       setBusy(false);
-      setError('Could not place order. Check address and bag.');
+      setError(res.ok ? 'Could not place order' : res.error);
       return;
     }
-    if (user && address) {
-      void syncCustomerOrder({
-        email: user.email,
-        name: address.name || user.name,
-        mobile: address.mobile || user.mobile,
-        city: address.city,
-        state: address.state,
-        pincode: address.pincode,
-        address: address.address,
-        total,
-      });
+    const payload = res.data.order;
+    const shipping = address;
+    if (!shipping) {
+      setBusy(false);
+      setError('Add a delivery address to continue');
+      return;
     }
+    const saved = buildLocalOrder({
+      id: payload.id,
+      items: payload.items?.length ? payload.items : items,
+      address: payload.address?.pincode ? payload.address : shipping,
+      paymentMethod: payload.paymentMethod || paymentMethod,
+      couponCode: payload.couponCode || coupon || undefined,
+      discount: payload.discount ?? couponOff,
+      subtotal: payload.subtotal || price,
+      total: payload.total || total,
+    });
+    recordOrder(saved);
     setDone(true);
     clearCart();
-    router.replace(`/payment/success?orderId=${order.id}`);
+    router.replace(`/payment/success?orderId=${saved.id}`);
   }
 
   return (
@@ -163,6 +183,7 @@ function PaymentContent() {
                 onClick={() => {
                   setMethod(m.id);
                   setError('');
+                  setFieldErrors({});
                 }}
                 className={`w-full flex items-center gap-2 text-left px-4 py-4 text-[13px] font-bold border-l-4 ${
                   method === m.id
@@ -190,13 +211,17 @@ function PaymentContent() {
                 <input
                   value={upi}
                   onChange={(e) => {
-                    setUpi(e.target.value.replace(/\s/g, '').slice(0, 80));
+                    setUpi(sanitizeUpi(e.target.value));
                     setError('');
+                    setFieldErrors((prev) => ({ ...prev, upi: '' }));
                   }}
                   placeholder="yourname@oksbi"
                   maxLength={80}
-                  className="w-full border border-line px-3 py-2.5 text-sm outline-none focus:border-ink"
+                  className={`w-full border px-3 py-2.5 text-sm outline-none focus:border-ink ${
+                    fieldErrors.upi ? 'border-myntra' : 'border-line'
+                  }`}
                 />
+                {fieldErrors.upi && <p className="text-[12px] text-myntra font-semibold mt-1">{fieldErrors.upi}</p>}
                 <div className="flex gap-2 mt-3 text-[11px] font-bold text-ink-soft">
                   <span className="px-2 py-1 border border-line">PhonePe</span>
                   <span className="px-2 py-1 border border-line">GPay</span>
@@ -209,37 +234,73 @@ function PaymentContent() {
                 <h2 className="font-bold text-[16px]">Credit / Debit Card</h2>
                 <input
                   value={card.number}
-                  onChange={(e) => setCard({ ...card, number: formatCardNumber(e.target.value) })}
+                  onChange={(e) => {
+                    setCard({ ...card, number: formatCardNumber(e.target.value) });
+                    setFieldErrors((prev) => ({ ...prev, number: '' }));
+                  }}
                   placeholder="XXXX XXXX XXXX XXXX"
                   inputMode="numeric"
                   maxLength={19}
-                  className="w-full border border-line px-3 py-2.5 text-sm outline-none"
+                  className={`w-full border px-3 py-2.5 text-sm outline-none ${
+                    fieldErrors.number ? 'border-myntra' : 'border-line'
+                  }`}
                 />
+                {fieldErrors.number && (
+                  <p className="text-[12px] text-myntra font-semibold">{fieldErrors.number}</p>
+                )}
                 <input
                   value={card.name}
-                  onChange={(e) => setCard({ ...card, name: onlyNameChars(e.target.value, 50) })}
+                  onChange={(e) => {
+                    setCard({ ...card, name: onlyNameChars(e.target.value, 50) });
+                    setFieldErrors((prev) => ({ ...prev, name: '' }));
+                  }}
                   placeholder="Name on card"
                   maxLength={50}
-                  className="w-full border border-line px-3 py-2.5 text-sm outline-none"
+                  className={`w-full border px-3 py-2.5 text-sm outline-none ${
+                    fieldErrors.name ? 'border-myntra' : 'border-line'
+                  }`}
                 />
+                {fieldErrors.name && (
+                  <p className="text-[12px] text-myntra font-semibold">{fieldErrors.name}</p>
+                )}
                 <div className="grid grid-cols-2 gap-3">
-                  <input
-                    value={card.expiry}
-                    onChange={(e) => setCard({ ...card, expiry: formatExpiry(e.target.value) })}
-                    placeholder="MM/YY"
-                    inputMode="numeric"
-                    maxLength={5}
-                    className="border border-line px-3 py-2.5 text-sm outline-none"
-                  />
-                  <input
-                    value={card.cvv}
-                    onChange={(e) => setCard({ ...card, cvv: onlyDigits(e.target.value, 4) })}
-                    placeholder="CVV"
-                    className="border border-line px-3 py-2.5 text-sm outline-none"
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={4}
-                  />
+                  <div>
+                    <input
+                      value={card.expiry}
+                      onChange={(e) => {
+                        setCard({ ...card, expiry: formatExpiry(e.target.value) });
+                        setFieldErrors((prev) => ({ ...prev, expiry: '' }));
+                      }}
+                      placeholder="MM/YY"
+                      inputMode="numeric"
+                      maxLength={5}
+                      className={`w-full border px-3 py-2.5 text-sm outline-none ${
+                        fieldErrors.expiry ? 'border-myntra' : 'border-line'
+                      }`}
+                    />
+                    {fieldErrors.expiry && (
+                      <p className="text-[12px] text-myntra font-semibold mt-1">{fieldErrors.expiry}</p>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      value={card.cvv}
+                      onChange={(e) => {
+                        setCard({ ...card, cvv: onlyDigits(e.target.value, 4) });
+                        setFieldErrors((prev) => ({ ...prev, cvv: '' }));
+                      }}
+                      placeholder="CVV"
+                      className={`w-full border px-3 py-2.5 text-sm outline-none ${
+                        fieldErrors.cvv ? 'border-myntra' : 'border-line'
+                      }`}
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={4}
+                    />
+                    {fieldErrors.cvv && (
+                      <p className="text-[12px] text-myntra font-semibold mt-1">{fieldErrors.cvv}</p>
+                    )}
+                  </div>
                 </div>
                 <p className="text-[11px] text-muted">Demo checkout — try 4111 1111 1111 1111. Cards are not charged.</p>
               </div>

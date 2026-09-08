@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -8,6 +9,8 @@ import RequireAuth from '@/components/auth/RequireAuth';
 import { useOrderStore } from '@/store/orderStore';
 import { useHydrated } from '@/store/hydrate';
 import { formatInr } from '@/lib/format';
+import { api } from '@/lib/api';
+import { Order } from '@/types/product';
 
 const steps = [
   { id: 'confirmed', label: 'Confirmed', icon: CheckCircle2 },
@@ -29,7 +32,15 @@ function OrderDetailContent() {
   const id = params.id as string;
   const lastOrderId = useOrderStore((s) => s.lastOrderId);
   const order = useOrderStore((s) => s.orders.find((o) => o.id === id));
+  const recordOrder = useOrderStore((s) => s.recordOrder);
   const hydrated = useHydrated((s) => s.hydrated);
+
+  useEffect(() => {
+    if (!hydrated || order) return;
+    void api<{ order?: Order }>(`/api/orders/${encodeURIComponent(id)}`).then((res) => {
+      if (res.ok && res.data.order?.id) recordOrder(res.data.order);
+    });
+  }, [hydrated, id, order, recordOrder]);
 
   if (!hydrated) return <div className="p-10 text-muted">Loading order...</div>;
 

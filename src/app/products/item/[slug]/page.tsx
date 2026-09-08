@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import ProductGrid from '@/components/product/ProductGrid';
+import ProductReviews from '@/components/product/ProductReviews';
 import { getProductBySlug, getSimilarProducts } from '@/lib/data/products';
 import { pincodeError } from '@/lib/validation';
 import { discountPercent, formatInr } from '@/lib/format';
@@ -24,6 +25,7 @@ import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useHydrated } from '@/store/hydrate';
 import { Product } from '@/types/product';
+import { api } from '@/lib/api';
 
 const categoryCrumbs: Record<string, string> = {
   men: 'Men Clothing',
@@ -31,18 +33,6 @@ const categoryCrumbs: Record<string, string> = {
   kids: 'Kids Clothing',
   ethnic: 'Ethnic Wear',
 };
-
-function ratingSplit(rating: number, total: number) {
-  const weights = [
-    Math.max(rating - 4, 0.15),
-    Math.max(rating - 3, 0.2),
-    0.18,
-    0.08,
-    0.05,
-  ];
-  const sum = weights.reduce((a, b) => a + b, 0);
-  return weights.map((w) => Math.max(1, Math.round((w / sum) * total)));
-}
 
 function sizeRows(product: Product) {
   if (product.sizes.some((s) => s.includes('Y'))) {
@@ -66,7 +56,10 @@ export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
-  const product = getProductBySlug(slug);
+  const localProduct = getProductBySlug(slug);
+  const [product, setProduct] = useState<Product | null>(localProduct || null);
+  const [missing, setMissing] = useState(false);
+  const [catalogReady, setCatalogReady] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
   const toggleWish = useWishlistStore((s) => s.toggle);
   const wished = useWishlistStore((s) =>
@@ -89,7 +82,36 @@ export default function ProductDetailPage() {
     [product]
   );
 
-  if (!product) {
+  useEffect(() => {
+    let alive = true;
+    setCatalogReady(false);
+    api<{ product?: Product }>(`/api/products/slug/${encodeURIComponent(slug)}`)
+      .then((res) => {
+        if (!alive) return;
+        if (res.ok && res.data.product) {
+          setProduct(res.data.product);
+          setMissing(false);
+          return;
+        }
+        if (!localProduct) setMissing(true);
+      })
+      .finally(() => {
+        if (alive) setCatalogReady(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [slug]);
+
+  if (!product && !missing) {
+    return (
+      <div className="max-w-content mx-auto px-6 py-24 text-center bg-white">
+        <p className="text-ink font-bold">Loading product...</p>
+      </div>
+    );
+  }
+
+  if (!product || missing) {
     return (
       <div className="max-w-content mx-auto px-6 py-24 text-center bg-white">
         <p className="text-ink font-bold">This product could not be found.</p>
@@ -102,7 +124,6 @@ export default function ProductDetailPage() {
 
   const discount = discountPercent(product.price, product.mrp);
   const isWished = hydrated && wished;
-  const bars = ratingSplit(product.rating, product.ratingCount);
   const specs: [string, string][] = [
     ['Fit', product.fit.split('.')[0]],
     ['Color', product.colors.join(', ')],
@@ -113,13 +134,14 @@ export default function ProductDetailPage() {
   ];
 
   function handleAddToBag() {
+    if (!catalogReady || !product) return;
     if (!selectedSize) {
       setError('Please select a size');
       sizeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     setError('');
-    addItem(product!, selectedSize);
+    addItem(product, selectedSize);
     setAdded(true);
   }
 
@@ -249,10 +271,11 @@ export default function ProductDetailPage() {
             <button
               type="button"
               onClick={handleAddToBag}
-              className="flex-[1.3] h-[50px] rounded-sm bg-[#ff3f6c] hover:bg-[#e63660] text-white text-[14px] font-bold uppercase tracking-wide inline-flex items-center justify-center gap-2"
+              disabled={!catalogReady}
+              className="flex-[1.3] h-[50px] rounded-sm bg-[#ff3f6c] hover:bg-[#e63660] text-white text-[14px] font-bold uppercase tracking-wide inline-flex items-center justify-center gap-2 disabled:opacity-60"
             >
               <ShoppingBag size={18} />
-              {added ? 'Added to bag' : 'Add to bag'}
+              {!catalogReady ? 'Loading...' : added ? 'Added to bag' : 'Add to bag'}
             </button>
             <button
               type="button"
@@ -328,7 +351,7 @@ export default function ProductDetailPage() {
             <div className="space-y-3 text-[13px]">
               {[
                 ['Bank Offer', '10% Instant Discount on HDFC Bank Credit Card. Min spend ₹3,000.'],
-                ['Coupon', 'Use AARAISH200 and get ₹200 off on orders above ₹1,499.'],
+                ['Coupon', 'Use CHANDAN200 and get ₹200 off on orders above ₹1,499.'],
                 ['Festive', 'Use FESTIVE500 and get ₹500 off on orders above ₹2,999.'],
               ].map(([title, body]) => (
                 <div key={title} className="border border-[#eaeaec] p-3">
@@ -366,54 +389,18 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          <div className="mt-8 pt-5 border-t border-[#d4d5d9]">
-            <p className="text-[16px] font-bold uppercase tracking-wide mb-4">
-              Ratings & Reviews
-            </p>
-            <div className="flex gap-8 items-start">
-              <div className="text-center">
-                <p className="text-[40px] font-extrabold leading-none flex items-center justify-center gap-1">
-                  {product.rating.toFixed(1)}
-                  <Star size={22} className="fill-[#14958f] text-[#14958f]" />
-                </p>
-                <p className="text-[12px] text-[#535766] mt-2">
-                  {product.ratingCount.toLocaleString('en-IN')} Verified Buyers
-                </p>
-              </div>
-              <div className="flex-1 space-y-1.5">
-                {[5, 4, 3, 2, 1].map((star, i) => (
-                  <div key={star} className="flex items-center gap-2 text-[12px] text-[#535766]">
-                    <span className="w-4">{star}</span>
-                    <Star size={10} />
-                    <div className="flex-1 h-1.5 bg-[#f5f5f6] rounded overflow-hidden">
-                      <div
-                        className="h-full bg-[#14958f]"
-                        style={{ width: `${Math.min(100, (bars[i] / product.ratingCount) * 100)}%` }}
-                      />
-                    </div>
-                    <span className="w-10 text-right">{bars[i]}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="mt-5 space-y-4">
-              {[
-                ['Great fit and quality', 'Fabric feels premium. Colour is exactly as shown. Would buy again.'],
-                ['Value for money', 'Wash is holding up well after two washes. Size is true to chart.'],
-              ].map(([title, body]) => (
-                <div key={title} className="border-t border-[#eaeaec] pt-4">
-                  <p className="text-[13px] font-bold flex items-center gap-2">
-                    <span className="bg-[#14958f] text-white text-[11px] px-1.5 py-0.5 rounded-sm">
-                      {product.rating.toFixed(1)} ★
-                    </span>
-                    {title}
-                  </p>
-                  <p className="text-[13px] text-[#535766] mt-1">{body}</p>
-                  <p className="text-[11px] text-[#94969f] mt-2">Verified Buyer · 12 days ago</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ProductReviews
+            productId={product.id}
+            fallbackAverage={product.rating}
+            fallbackCount={product.ratingCount}
+            onRated={(summary) => {
+              if (summary.count > 0) {
+                setProduct((prev) =>
+                  prev ? { ...prev, rating: summary.average, ratingCount: summary.count } : prev
+                );
+              }
+            }}
+          />
         </div>
       </div>
 

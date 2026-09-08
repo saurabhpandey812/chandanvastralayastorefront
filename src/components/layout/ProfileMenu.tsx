@@ -71,7 +71,10 @@ export default function ProfileMenu() {
             )}
             {user && (
               <button
-                onClick={logout}
+                onClick={() => {
+                  void logout();
+                  setOpen(false);
+                }}
                 className="w-full flex items-center gap-2 px-4 py-2 hover:bg-mist text-left text-myntra font-semibold"
               >
                 <LogOut size={14} /> Logout

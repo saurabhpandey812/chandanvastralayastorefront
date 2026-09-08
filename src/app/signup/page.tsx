@@ -15,7 +15,7 @@ import {
   passwordScore,
   personNameError,
 } from '@/lib/authValidation';
-import { onlyDigits, onlyNameChars } from '@/lib/validation';
+import { onlyDigits, onlyNameChars, sanitizeEmail } from '@/lib/validation';
 import { safeNext, useAuthStore } from '@/store/authStore';
 import { useHydrated } from '@/store/hydrate';
 
@@ -45,7 +45,7 @@ function SignupForm() {
     if (hydrated && user) router.replace(next);
   }, [hydrated, user, next, router]);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setInfo('');
     const nextErrors: Record<string, string> = {};
@@ -68,7 +68,7 @@ function SignupForm() {
       setBusy(false);
       return;
     }
-    const result = signup({ name: name.trim(), email: email.trim(), mobile, password });
+    const result = await signup({ name: name.trim(), email: email.trim(), mobile, password });
     setBusy(false);
     if (!result.ok) {
       setError(result.error);
@@ -115,7 +115,7 @@ function SignupForm() {
               <input
                 value={email}
                 onChange={(e) => {
-                  setEmail(e.target.value.slice(0, 80));
+                  setEmail(sanitizeEmail(e.target.value));
                   setErrors((prev) => ({ ...prev, email: '' }));
                 }}
                 autoComplete="email"

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CartItem, Product } from '@/types/product';
+import { COUPONS } from '@/lib/coupons';
 
 interface CartState {
   items: CartItem[];
@@ -17,12 +18,6 @@ interface CartState {
   totalPrice: () => number;
   couponDiscount: () => number;
 }
-
-const COUPONS: Record<string, { min: number; off: number }> = {
-  AARAISH200: { min: 1499, off: 200 },
-  FESTIVE500: { min: 2999, off: 500 },
-  FIRST100: { min: 799, off: 100 },
-};
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -107,7 +102,7 @@ export const useCartStore = create<CartState>()(
         return get().totalPrice() >= deal.min ? deal.off : 0;
       },
     }),
-    { name: 'aaraish-bag' }
+    { name: 'chandan-bag' }
   )
 );
 

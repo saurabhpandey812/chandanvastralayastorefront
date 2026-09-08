@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import RequireAuth from '@/components/auth/RequireAuth';
@@ -17,7 +18,12 @@ export default function OrdersPage() {
 
 function OrdersContent() {
   const orders = useOrderStore((s) => s.orders);
+  const fetchOrders = useOrderStore((s) => s.fetchOrders);
   const hydrated = useHydrated((s) => s.hydrated);
+
+  useEffect(() => {
+    if (hydrated) void fetchOrders();
+  }, [hydrated, fetchOrders]);
 
   if (!hydrated) return <div className="p-10 text-muted">Loading orders...</div>;
 

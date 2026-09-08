@@ -7,3 +7,6 @@ out
 next-env.d.ts
 public/uploads/products/*
 !public/uploads/products/.gitkeep
+data/*.json
+!data/.gitkeep
+

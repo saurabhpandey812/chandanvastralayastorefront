@@ -11,7 +11,7 @@ import { useWishlistStore } from '@/store/wishlistStore';
 import { useAuthStore } from '@/store/authStore';
 import { useHydrated } from '@/store/hydrate';
 import { formatInr } from '@/lib/format';
-import { couponFormatError, sanitizeCoupon } from '@/lib/validation';
+import { couponFormatError, onlyDigits, pincodeError, sanitizeCoupon } from '@/lib/validation';
 
 export default function CartPage() {
   const router = useRouter();
@@ -29,6 +29,9 @@ export default function CartPage() {
   const user = useAuthStore((s) => s.user);
   const [code, setCode] = useState('');
   const [couponError, setCouponError] = useState('');
+  const [pincode, setPincode] = useState('');
+  const [pinMsg, setPinMsg] = useState('');
+  const [pinOk, setPinOk] = useState(false);
 
   if (!hydrated) {
     return <div className="max-w-content mx-auto px-6 py-20 text-muted">Loading bag...</div>;
@@ -68,14 +71,53 @@ export default function CartPage() {
     setCode('');
   }
 
+  function checkPin() {
+    const err = pincodeError(pincode);
+    if (err) {
+      setPinOk(false);
+      setPinMsg(err);
+      return;
+    }
+    setPinOk(true);
+    const date = new Date(Date.now() + 4 * 86400000).toLocaleDateString('en-IN', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+    setPinMsg(`Get it by ${date}`);
+  }
+
   return (
     <div className="max-w-[1100px] mx-auto px-4 py-8 grid lg:grid-cols-[1fr_340px] gap-6">
       <div className="space-y-4">
         <div className="bg-white p-4 border border-line">
-          <p className="text-sm font-bold">
-            Check delivery time &amp; services{' '}
-            <span className="text-myntra ml-2">Enter PIN CODE</span>
-          </p>
+          <p className="text-sm font-bold mb-3">Check delivery time &amp; services</p>
+          <div className="flex max-w-sm h-11 items-stretch border border-line overflow-hidden">
+            <input
+              value={pincode}
+              onChange={(e) => {
+                setPincode(onlyDigits(e.target.value, 6));
+                setPinMsg('');
+                setPinOk(false);
+              }}
+              placeholder="Enter PIN CODE"
+              inputMode="numeric"
+              maxLength={6}
+              className="min-w-0 flex-1 px-3 text-sm outline-none uppercase"
+            />
+            <button
+              type="button"
+              onClick={checkPin}
+              className="shrink-0 px-4 border-l border-line text-sm font-bold text-myntra"
+            >
+              CHECK
+            </button>
+          </div>
+          {pinMsg && (
+            <p className={`text-[13px] font-semibold mt-2 ${pinOk ? 'text-forest' : 'text-myntra'}`}>
+              {pinMsg}
+            </p>
+          )}
         </div>
 
         {items.map((item) => (

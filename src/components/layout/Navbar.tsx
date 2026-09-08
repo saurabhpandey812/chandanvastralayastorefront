@@ -16,7 +16,7 @@ import { useWishlistStore } from '@/store/wishlistStore';
 import { useAuthStore } from '@/store/authStore';
 import { useHydrated } from '@/store/hydrate';
 import ProfileMenu from './ProfileMenu';
-import BrandLogo from '@/components/brand/BrandLogo';
+import StoreMark from '@/components/brand/StoreMark';
 import { sanitizeSearch, searchQueryError } from '@/lib/validation';
 
 type MenuGroup = { title: string; links: [string, string][] };
@@ -499,7 +499,7 @@ export default function Navbar() {
             {mobileOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
 
-          <BrandLogo href="/" hideNameOnMobile />
+          <StoreMark size="lg" />
 
           <nav className="hidden lg:flex items-stretch h-full ml-6">
             {navItems.map((item) => (

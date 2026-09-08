@@ -24,6 +24,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         useAuthStore.persist.hasHydrated()
       ) {
         setHydrated();
+        void useAuthStore.getState().hydrate();
       }
     };
     finish();

@@ -110,8 +110,8 @@ function CheckoutContent() {
     mobile: (v) => onlyDigits(v, 10),
     pincode: (v) => onlyDigits(v, 6),
     city: onlyCityChars,
-    locality: (v) => v.slice(0, 40),
-    address: (v) => v.slice(0, 120),
+    locality: (v) => v.replace(/[<>]/g, '').slice(0, 40),
+    address: (v) => v.replace(/[<>]/g, '').slice(0, 120),
   };
 
   const field = (

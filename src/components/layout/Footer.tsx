@@ -26,7 +26,7 @@ const columns = [
     ],
   },
   {
-    title: 'Experience Chandan Vastralaya App',
+    title: 'Experience our App',
     links: [
       ['Android App', '/'],
       ['iOS App', '/'],
@@ -70,7 +70,7 @@ export default function Footer() {
       <div className="border-t border-line">
         <div className="max-w-store mx-auto px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[12px] text-ink-soft">
           <p>© {new Date().getFullYear()} Chandan Vastralaya. All rights reserved.</p>
-          <p>Ethnic and everyday fashion from Chandan Vastralaya.</p>
+          <p>A clothing store inspired by India&apos;s favourite fashion app.</p>
         </div>
       </div>
     </footer>

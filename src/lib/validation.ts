@@ -23,6 +23,22 @@ export function sanitizeCoupon(value: string) {
   return value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 16);
 }
 
+export function sanitizeEmail(value: string) {
+  return value.replace(/\s/g, '').slice(0, 80);
+}
+
+export function sanitizeLoginId(value: string) {
+  const raw = value.slice(0, 80);
+  if (raw.includes('@') || /[A-Za-z._%]/.test(raw)) {
+    return raw.replace(/\s/g, '').slice(0, 80);
+  }
+  return onlyDigits(raw, 10);
+}
+
+export function sanitizeUpi(value: string) {
+  return value.replace(/\s/g, '').toLowerCase().replace(/[^a-z0-9._@-]/g, '').slice(0, 80);
+}
+
 export function formatCardNumber(value: string) {
   return onlyDigits(value, 16).replace(/(\d{4})(?=\d)/g, '$1 ');
 }
@@ -172,7 +188,7 @@ export function couponFormatError(value: string) {
 }
 
 export function upiError(value: string) {
-  const upi = value.trim();
+  const upi = sanitizeUpi(value);
   if (!upi) return 'Enter your UPI ID';
   if (!isValidUpi(upi)) return 'Enter a valid UPI ID like name@oksbi';
   return null;
@@ -214,5 +230,63 @@ export function searchQueryError(value: string) {
   const q = collapseSpaces(value);
   if (!q) return null;
   if (q.length < 2) return 'Type at least 2 characters to search';
+  return null;
+}
+
+export function reviewRatingError(value: number) {
+  if (!Number.isInteger(value) || value < 1 || value > 5) return 'Choose a rating from 1 to 5 stars';
+  return null;
+}
+
+export function reviewTitleError(value: string) {
+  const title = collapseSpaces(value);
+  if (!title) return null;
+  if (title.length > 80) return 'Title cannot exceed 80 characters';
+  return null;
+}
+
+export function reviewCommentError(value: string) {
+  const comment = collapseSpaces(value);
+  if (!comment) return 'Write a short review';
+  if (comment.length < 10) return 'Review should be at least 10 characters';
+  if (comment.length > 800) return 'Review cannot exceed 800 characters';
+  return null;
+}
+
+export const MAX_REVIEW_IMAGES = 4;
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+export const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
+export function isHttpUrl(value: string) {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+export function isLocalUploadPath(value: string) {
+  return /^\/uploads\/(products|reviews)\/[a-zA-Z0-9._-]+$/.test(value.trim());
+}
+
+export function isImageSrc(value: string) {
+  const src = value.trim();
+  return isLocalUploadPath(src) || isHttpUrl(src);
+}
+
+export function imageFileError(file: { type: string; size: number }) {
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    return 'Only JPG, PNG, WEBP or GIF images are allowed';
+  }
+  if (file.size <= 0) return 'Image file is empty';
+  if (file.size > MAX_IMAGE_BYTES) return 'Each image must be 5 MB or smaller';
+  return null;
+}
+
+export function reviewImagesError(value: string[]) {
+  if (!Array.isArray(value)) return 'Invalid photos';
+  if (value.length > MAX_REVIEW_IMAGES) return `You can add up to ${MAX_REVIEW_IMAGES} photos`;
+  if (value.some((src) => !isImageSrc(src))) return 'Each photo must be an uploaded image';
   return null;
 }

@@ -8,6 +8,7 @@ import AuthShell from '@/components/auth/AuthShell';
 import PasswordField from '@/components/auth/PasswordField';
 import SocialButtons from '@/components/auth/SocialButtons';
 import { loginIdError, passwordError } from '@/lib/authValidation';
+import { sanitizeLoginId } from '@/lib/validation';
 import { safeNext, useAuthStore } from '@/store/authStore';
 import { useHydrated } from '@/store/hydrate';
 
@@ -20,6 +21,7 @@ function LoginForm() {
   const login = useAuthStore((s) => s.login);
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<{ id?: string; password?: string }>({});
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState(false);
@@ -28,18 +30,18 @@ function LoginForm() {
     if (hydrated && user) router.replace(next);
   }, [hydrated, user, next, router]);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setInfo('');
     const value = id.trim();
     const idErr = loginIdError(value);
     const passErr = passwordError(password);
-    if (idErr) {
-      setError(idErr);
-      return;
-    }
-    if (passErr) {
-      setError(passErr);
+    setErrors({
+      id: idErr || undefined,
+      password: passErr || undefined,
+    });
+    if (idErr || passErr) {
+      setError('');
       return;
     }
     setBusy(true);
@@ -48,7 +50,7 @@ function LoginForm() {
       setBusy(false);
       return;
     }
-    const result = login(value, password);
+    const result = await login(value, password);
     setBusy(false);
     if (!result.ok) {
       setError(result.error);
@@ -79,16 +81,33 @@ function LoginForm() {
               <Mail size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 value={id}
-                onChange={(e) => setId(e.target.value.slice(0, 80))}
+                onChange={(e) => {
+                  setId(sanitizeLoginId(e.target.value));
+                  setErrors((prev) => ({ ...prev, id: undefined }));
+                  setError('');
+                }}
                 autoComplete="username"
                 maxLength={80}
                 placeholder="name@email.com or 9876543210"
-                className="w-full h-12 rounded-md border border-line pl-11 pr-3 text-sm outline-none transition focus:border-myntra focus:ring-2 focus:ring-myntra/15"
+                className={`w-full h-12 rounded-md border pl-11 pr-3 text-sm outline-none transition focus:border-myntra focus:ring-2 focus:ring-myntra/15 ${
+                  errors.id ? 'border-myntra' : 'border-line'
+                }`}
               />
             </div>
+            {errors.id && <p className="text-[12px] text-myntra font-semibold mt-1">{errors.id}</p>}
           </label>
 
-          <PasswordField value={password} onChange={setPassword} />
+          <PasswordField
+            value={password}
+            onChange={(v) => {
+              setPassword(v);
+              setErrors((prev) => ({ ...prev, password: undefined }));
+              setError('');
+            }}
+          />
+          {errors.password && (
+            <p className="text-[12px] text-myntra font-semibold">{errors.password}</p>
+          )}
 
           <div className="flex items-center justify-between text-[12px]">
             <label className="flex items-center gap-2 text-ink-soft font-semibold">
@@ -98,7 +117,7 @@ function LoginForm() {
             <button
               type="button"
               onClick={() =>
-                setInfo('Password reset is demo-only. Use  saurabh@aaraish.com  /  Aaraish@123')
+                setInfo('Password reset is demo-only. Use  saurabh@chandanvastralaya.com  /  Chandan@123')
               }
               className="font-bold text-myntra"
             >
@@ -137,7 +156,7 @@ function LoginForm() {
 
         <div className="mt-5 rounded-md bg-[#fff4f7] border border-myntra/20 p-3 text-[12px] text-ink-soft">
           <p className="font-bold text-ink">Demo account</p>
-          <p className="mt-0.5">saurabh@aaraish.com · Aaraish@123</p>
+          <p className="mt-0.5">saurabh@chandanvastralaya.com · Chandan@123</p>
         </div>
 
         <p className="mt-5 text-sm text-center text-ink-soft">

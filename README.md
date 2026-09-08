@@ -1,4 +1,4 @@
-# Aaraish — user-facing storefront
+# Chandan Vastralaya — user-facing storefront
 
 Next.js 14 (App Router) + TypeScript + Tailwind CSS + Zustand. This is the
 `apps/web` piece of the larger monorepo — it currently runs on mock data
