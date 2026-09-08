@@ -16,27 +16,12 @@ export async function POST(req: Request) {
 
   const local = await findByLogin(id);
   if (local && (await verifyPassword(local, body.password || ''))) {
-    const nest = isValidEmail(local.email)
-      ? await backendRequest<{
-          accessToken: string;
-          refreshToken: string;
-          user: { id: string; email: string; role: string };
-        }>({
-          path: '/auth/login',
-          method: 'POST',
-          body: { email: local.email, password: body.password },
-        })
-      : null;
-
     const user = toPublic(local);
     const res = jsonOk({ user });
     applySessionCookie(
       res,
       await createSessionToken({ userId: user.id, email: user.email, name: user.name })
     );
-    if (nest?.ok && nest.data?.accessToken && nest.data.refreshToken) {
-      applyApiCookies(res, nest.data);
-    }
     void syncRegisteredCustomer({
       id: user.id,
       name: user.name,

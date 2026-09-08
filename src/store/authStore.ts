@@ -3,6 +3,13 @@ import { persist } from 'zustand/middleware';
 import { AuthResult, PublicUser } from '@/types/auth';
 import { api } from '@/lib/api';
 
+let authEpoch = 0;
+
+function bumpAuthEpoch() {
+  authEpoch += 1;
+  return authEpoch;
+}
+
 interface AuthState {
   user: PublicUser | null;
   hydrate: () => Promise<void>;
@@ -30,7 +37,9 @@ export const useAuthStore = create<AuthState>()(
       user: null,
 
       hydrate: async () => {
+        const epoch = authEpoch;
         const res = await api<PublicUser>('/api/auth/me');
+        if (epoch !== authEpoch) return;
         if (!res.ok) {
           set({ user: null });
           return;
@@ -46,6 +55,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       signup: async (input) => {
+        bumpAuthEpoch();
         const res = await api<{ user?: PublicUser }>('/api/auth/register', {
           method: 'POST',
           body: JSON.stringify(input),
@@ -58,6 +68,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       login: async (id, password) => {
+        bumpAuthEpoch();
         const res = await api<{ user?: PublicUser }>('/api/auth/login', {
           method: 'POST',
           body: JSON.stringify({ id, password }),
@@ -80,6 +91,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
+        bumpAuthEpoch();
         await api('/api/auth/logout', { method: 'POST' });
         set({ user: null });
       },

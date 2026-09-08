@@ -18,9 +18,8 @@ export function toPublic(user: StoredUser): PublicUser {
 }
 
 export async function ensureDemoUser() {
-  const users = await store.read();
   const passwordHash = await hashSecret('Chandan@123');
-  const demo = {
+  const demo: StoredUser = {
     id: 'u-demo',
     name: 'Saurabh Pandey',
     email: 'saurabh@chandanvastralaya.com',
@@ -29,18 +28,26 @@ export async function ensureDemoUser() {
     passwordHash,
   };
 
-  if (users.length === 0) {
-    await store.write([demo]);
-    return;
-  }
+  await store.update((users) => {
+    const byId = users.findIndex((u) => u.id === demo.id);
+    const byEmail = users.findIndex((u) => same(u.email, demo.email));
+    const idx = byId >= 0 ? byId : byEmail;
+    if (idx === -1) return [demo, ...users];
 
-  const idx = users.findIndex((u) => u.id === 'u-demo');
-  if (idx === -1) return;
-  if (users[idx].email !== demo.email || users[idx].passwordHash !== passwordHash) {
+    const current = users[idx];
+    if (
+      current.id === demo.id &&
+      current.email === demo.email &&
+      current.mobile === demo.mobile &&
+      current.passwordHash === passwordHash
+    ) {
+      return users;
+    }
+
     const next = [...users];
-    next[idx] = { ...users[idx], email: demo.email, passwordHash };
-    await store.write(next);
-  }
+    next[idx] = { ...current, ...demo };
+    return next;
+  });
 }
 
 export async function findByEmail(email: string) {
